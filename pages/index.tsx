@@ -76,8 +76,6 @@ const Home: NextPage = () => {
     };
   }, [debouncedUpdate]);
 
-  if (!characters) return null;
-
   return (
     <>
       <NextSeo
@@ -116,81 +114,82 @@ const Home: NextPage = () => {
           </p>
 
           <div className="mt-6 mb-12 grid grid-cols-1 sm:gap-4 lg:grid-cols-2 w-full sm:px-6 lg:max-w-5xl">
-            {characters.map((c: any) => {
-              const arr = c.attributes.map((attr: any) => attr.count);
-              const sum = arr.reduce((a: any, b: any) => a + b, 0);
-              return (
-                <div
-                  key={c.id}
-                  className="shadow sm:rounded-xl border p-2 py-4 sm:p-6 text-left bg-white"
-                >
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-bold">{c.name}</h3>
-                    <p className="px-2 inline-flex text-sm leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                      {
-                        <NumberFormat
-                          value={sum}
-                          displayType={"text"}
-                          thousandSeparator={true}
-                        />
-                      }
-                    </p>
-                  </div>
-                  <p className="mt-4 text-xl">{c.say}</p>
-                  <div className="mt-2 flex flex-wrap">
-                    {c.attributes.map((attr: any) => {
-                      return (
-                        <button
-                          key={attr.id}
-                          className="mb-2 mr-2 inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-sm leading-4 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                          onClick={() => {
-                            setCharacters((prevState: any) => {
-                              const newState = prevState.map((char: any) => {
-                                if (char.id === c.id) {
-                                  const attributes = char.attributes.map(
-                                    (item: any) => {
-                                      if (item.id === attr.id) {
-                                        return {
-                                          ...item,
-                                          count: item.count + 1,
-                                        };
+            {!!characters &&
+              characters.map((c: any) => {
+                const arr = c.attributes.map((attr: any) => attr.count);
+                const sum = arr.reduce((a: any, b: any) => a + b, 0);
+                return (
+                  <div
+                    key={c.id}
+                    className="shadow sm:rounded-xl border p-2 py-4 sm:p-6 text-left bg-white"
+                  >
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-2xl font-bold">{c.name}</h3>
+                      <p className="px-2 inline-flex text-sm leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        {
+                          <NumberFormat
+                            value={sum}
+                            displayType={"text"}
+                            thousandSeparator={true}
+                          />
+                        }
+                      </p>
+                    </div>
+                    <p className="mt-4 text-xl">{c.say}</p>
+                    <div className="mt-2 flex flex-wrap">
+                      {c.attributes.map((attr: any) => {
+                        return (
+                          <button
+                            key={attr.id}
+                            className="mb-2 mr-2 inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-sm leading-4 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            onClick={() => {
+                              setCharacters((prevState: any) => {
+                                const newState = prevState.map((char: any) => {
+                                  if (char.id === c.id) {
+                                    const attributes = char.attributes.map(
+                                      (item: any) => {
+                                        if (item.id === attr.id) {
+                                          return {
+                                            ...item,
+                                            count: item.count + 1,
+                                          };
+                                        }
+                                        return item;
                                       }
-                                      return item;
-                                    }
-                                  );
-                                  return { ...char, attributes };
-                                }
-                                return char;
+                                    );
+                                    return { ...char, attributes };
+                                  }
+                                  return char;
+                                });
+
+                                return newState;
                               });
 
-                              return newState;
-                            });
+                              input.current[attr.id] =
+                                input.current[attr.id] || 0;
+                              input.current[attr.id] += 1;
 
-                            input.current[attr.id] =
-                              input.current[attr.id] || 0;
-                            input.current[attr.id] += 1;
-
-                            debouncedUpdate();
-                          }}
-                        >
-                          <span className="mr-2 text-2xl">{attr.emoji}</span>
-                          <span className="font-medium">{attr.name}</span>
-                          <span className="ml-1 text-gray-500">
-                            (
-                            <NumberFormat
-                              value={attr.count}
-                              displayType={"text"}
-                              thousandSeparator={true}
-                            />
-                            )
-                          </span>
-                        </button>
-                      );
-                    })}
+                              debouncedUpdate();
+                            }}
+                          >
+                            <span className="mr-2 text-2xl">{attr.emoji}</span>
+                            <span className="font-medium">{attr.name}</span>
+                            <span className="ml-1 text-gray-500">
+                              (
+                              <NumberFormat
+                                value={attr.count}
+                                displayType={"text"}
+                                thousandSeparator={true}
+                              />
+                              )
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </main>
 
