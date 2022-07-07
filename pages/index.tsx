@@ -1,86 +1,180 @@
-import type { NextPage } from 'next'
-import Head from 'next/head'
-import Image from 'next/image'
+import type { NextPage } from "next";
+import Head from "next/head";
+import useSWR from "swr";
+import debounce from "lodash.debounce";
+import { useEffect, useMemo, useRef, useState } from "react";
+import NumberFormat from "react-number-format";
+import fetcher from "../lib/fetcher";
 
 const Home: NextPage = () => {
+  const { data, error } = useSWR({ url: "/api/get-data" }, fetcher, {
+    refreshInterval: 1500,
+    dedupingInterval: 1000,
+  });
+
+  const [characters, setCharacters] = useState<any>(null);
+  const input = useRef<any>({});
+
+  useEffect(() => {
+    if (data?.characters) {
+      if (!characters) {
+        setCharacters([...data.characters]);
+      } else {
+        const max1 = Math.max(
+          ...characters.map((c: any) =>
+            Math.max(
+              new Date(c.updatedAt).getTime(),
+              ...c.attributes.map((a: any) => new Date(a.updatedAt).getTime())
+            )
+          )
+        );
+        const max2 = Math.max(
+          ...data.characters.map((c: any) =>
+            Math.max(
+              new Date(c.updatedAt).getTime(),
+              ...c.attributes.map((a: any) => new Date(a.updatedAt).getTime())
+            )
+          )
+        );
+        if (max2 > max1) {
+          console.log({ max2, max1 });
+          setCharacters([...data.characters]);
+        }
+      }
+    }
+  }, [data]);
+
+  const debouncedUpdate = useMemo(
+    () =>
+      debounce(async () => {
+        try {
+          const keys = Object.keys(input.current);
+          if (!keys.length) return;
+          const body = keys.map((key) => {
+            return { id: parseInt(key), increment: input.current[key] };
+          });
+          input.current = {};
+
+          await fetch(`/api/increment`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+          }).then((res) => res.json());
+        } catch (error) {
+          console.log(error);
+        }
+      }, 1000),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedUpdate.cancel();
+    };
+  }, [debouncedUpdate]);
+
+  if (!characters) return null;
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center py-2">
+    <div className="flex min-h-screen flex-col items-center justify-center py-10 bg-red-500">
       <Head>
-        <title>Create Next App</title>
+        <title>賀爸爸去哪兒?!</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="flex w-full flex-1 flex-col items-center justify-center px-20 text-center">
-        <h1 className="text-6xl font-bold">
-          Welcome to{' '}
-          <a className="text-blue-600" href="https://nextjs.org">
-            Next.js!
-          </a>
+      <main className="flex w-full flex-1 flex-col items-center justify-center text-center">
+        <h1 className="text-4xl sm:text-6xl font-bold text-center text-white">
+          賀爸爸去哪兒?!
         </h1>
 
-        <p className="mt-3 text-2xl">
-          Get started by editing{' '}
-          <code className="rounded-md bg-gray-100 p-3 font-mono text-lg">
-            pages/index.tsx
-          </code>
+        <p className="mt-3 rounded-md bg-red-600 p-3 font-mono text-lg text-red-200">
+          幫幫手，唔知佢去左邊，有點担心。
         </p>
 
-        <div className="mt-6 flex max-w-4xl flex-wrap items-center justify-around sm:w-full">
-          <a
-            href="https://nextjs.org/docs"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Documentation &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Find in-depth information about Next.js features and its API.
-            </p>
-          </a>
+        <div className="mt-6 mb-12 grid grid-cols-1 sm:gap-4 lg:grid-cols-2 w-full sm:px-6 lg:max-w-5xl">
+          {characters.map((c: any) => {
+            const arr = c.attributes.map((attr: any) => attr.count);
+            const sum = arr.reduce((a: any, b: any) => a + b, 0);
+            return (
+              <div
+                key={c.id}
+                className="shadow sm:rounded-xl border p-2 py-4 sm:p-6 text-left bg-white"
+              >
+                <div className="flex justify-between items-center">
+                  <h3 className="text-2xl font-bold">{c.name}</h3>
+                  <p className="px-2 inline-flex text-sm leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    {
+                      <NumberFormat
+                        value={sum}
+                        displayType={"text"}
+                        thousandSeparator={true}
+                      />
+                    }
+                  </p>
+                </div>
+                <p className="mt-4 text-xl">{c.say}</p>
+                <div className="mt-2 flex flex-wrap">
+                  {c.attributes.map((attr: any) => {
+                    return (
+                      <button
+                        key={attr.id}
+                        className="mb-2 mr-2 inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-sm leading-4 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        onClick={() => {
+                          setCharacters((prevState: any) => {
+                            const newState = prevState.map((char: any) => {
+                              if (char.id === c.id) {
+                                const attributes = char.attributes.map(
+                                  (item: any) => {
+                                    if (item.id === attr.id) {
+                                      return { ...item, count: item.count + 1 };
+                                    }
+                                    return item;
+                                  }
+                                );
+                                return { ...char, attributes };
+                              }
+                              return char;
+                            });
 
-          <a
-            href="https://nextjs.org/learn"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Learn &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Learn about Next.js in an interactive course with quizzes!
-            </p>
-          </a>
+                            return newState;
+                          });
 
-          <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Examples &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Discover and deploy boilerplate example Next.js projects.
-            </p>
-          </a>
+                          input.current[attr.id] = input.current[attr.id] || 0;
+                          input.current[attr.id] += 1;
 
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Deploy &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+                          debouncedUpdate();
+                        }}
+                      >
+                        <span className="mr-2 text-2xl">{attr.emoji}</span>
+                        <span className="font-medium">{attr.name}</span>
+                        <span className="ml-1 text-gray-500">
+                          (
+                          <NumberFormat
+                            value={attr.count}
+                            displayType={"text"}
+                            thousandSeparator={true}
+                          />
+                          )
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </main>
 
-      <footer className="flex h-24 w-full items-center justify-center border-t">
-        <a
-          className="flex items-center justify-center gap-2"
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-        </a>
+      <footer className="flex h-24 w-full items-center justify-center border-t border-t-red-200">
+        <p className="flex items-center justify-center gap-2 text-red-200">
+          Powered by 賀爸爸復仇者聯盟
+        </p>
       </footer>
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;
