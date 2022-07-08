@@ -16,45 +16,50 @@ const Home: NextPage = () => {
   const [characters, setCharacters] = useState<any>(null);
   const input = useRef<any>({});
 
+  const checkUpdate = () => {
+    const keys = Object.keys(input.current);
+    if (keys.length) return;
+
+    const max1 = Math.max(
+      ...characters.map((c: any) =>
+        Math.max(
+          new Date(c.updatedAt).getTime(),
+          ...c.attributes.map((a: any) => new Date(a.updatedAt).getTime())
+        )
+      )
+    );
+    const max2 = Math.max(
+      ...data.characters.map((c: any) =>
+        Math.max(
+          new Date(c.updatedAt).getTime(),
+          ...c.attributes.map((a: any) => new Date(a.updatedAt).getTime())
+        )
+      )
+    );
+    if (max2 > max1) {
+      setCharacters([...data.characters]);
+    }
+  };
+
   useEffect(() => {
     if (data?.characters) {
       if (!characters) {
         setCharacters([...data.characters]);
       } else {
-        const max1 = Math.max(
-          ...characters.map((c: any) =>
-            Math.max(
-              new Date(c.updatedAt).getTime(),
-              ...c.attributes.map((a: any) => new Date(a.updatedAt).getTime())
-            )
-          )
-        );
-        const max2 = Math.max(
-          ...data.characters.map((c: any) =>
-            Math.max(
-              new Date(c.updatedAt).getTime(),
-              ...c.attributes.map((a: any) => new Date(a.updatedAt).getTime())
-            )
-          )
-        );
-        if (max2 > max1) {
-          console.log({ max2, max1 });
-          setCharacters([...data.characters]);
-        }
+        checkUpdate();
       }
     }
   }, [data]);
 
   const debouncedUpdate = useMemo(
     () =>
-      debounce(async () => {
+      debounce(async (callback?: any) => {
         try {
           const keys = Object.keys(input.current);
           if (!keys.length) return;
           const body = keys.map((key) => {
             return { id: parseInt(key), increment: input.current[key] };
           });
-          input.current = {};
 
           await fetch(`/api/increment`, {
             method: "POST",
@@ -63,8 +68,15 @@ const Home: NextPage = () => {
             },
             body: JSON.stringify(body),
           }).then((res) => res.json());
+
+          input.current = {};
+
+          if (callback) {
+            callback();
+          }
         } catch (error) {
           console.log(error);
+          input.current = {};
         }
       }, 1000),
     []
