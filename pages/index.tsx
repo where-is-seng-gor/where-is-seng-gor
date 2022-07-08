@@ -88,9 +88,9 @@ const Home: NextPage = () => {
           description: "一家大細陪住你。有賀爸爸、好姨醫生、奇異局長和撩鼻佬們",
           images: [
             {
-              url: "https://where-is-seng-gor.vercel.app/og-image.jpg",
-              width: 800,
-              height: 600,
+              url: "https://where-is-seng-gor.vercel.app/og-image1.jpg",
+              width: 1200,
+              height: 630,
               alt: "賀爸爸去哪兒?!",
               type: "image/jpeg",
             },
